@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model SalesCustomer {
+  id        String       @id @default(cuid())
+  name      String
+  email     String?      @unique
+  phone     String?
+  document  String?      @unique
+  city      String?
+  state     String?
+  notes     String?
+  orders    SalesOrder[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([name])
+}
+
+model SalesProduct {
+  id             String                 @id @default(cuid())
+  name           String
+  sku            String                 @unique
+  description    String?
+  category       String
+  priceInCents   Int
+  costInCents    Int
+  stockQuantity  Int                    @default(0)
+  minimumStock   Int                    @default(0)
+  active         Boolean                @default(true)
+  orderItems     SalesOrderItem[]
+  stockMovements SalesStockMovement[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([name])
+  @@index([category])
+}
+
+model SalesOrder {
+  id              String            @id @default(cuid())
+  orderNumber     Int               @unique
+  customerId      String
+  customerName    String
+  subtotalInCents Int
+  totalInCents    Int
+  status          String            @default("PAID")
+  notes           String?
+  customer        SalesCustomer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items           SalesOrderItem[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model SalesOrderItem {
+  id                String       @id @default(cuid())
+  orderId           String
+  productId         String
+  productName       String
+  quantity          Int
+  unitPriceInCents  Int
+  totalPriceInCents Int
+  order             SalesOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product           SalesProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model SalesStockMovement {
+  id               String            @id @default(cuid())
+  productId        String
+  type             String
+  quantity         Int
+  reason           String
+  referenceOrderId String?
+  product          SalesProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+
+  @@index([productId, createdAt])
+  @@index([referenceOrderId])
+}
